@@ -1,0 +1,28 @@
+PODS:
+  - flag_explorer (0.0.1):
+    - Flutter
+  - Flutter (1.0.0)
+  - integration_test (0.0.1):
+    - Flutter
+
+DEPENDENCIES:
+  - flag_explorer (from `.symlinks/plugins/flag_explorer/ios`)
+  - Flutter (from `Flutter`)
+  - integration_test (from `.symlinks/plugins/integration_test/ios`)
+
+EXTERNAL SOURCES:
+  flag_explorer:
+    :path: ".symlinks/plugins/flag_explorer/ios"
+  Flutter:
+    :path: Flutter
+  integration_test:
+    :path: ".symlinks/plugins/integration_test/ios"
+
+SPEC CHECKSUMS:
+  flag_explorer: 316e6f6b0c94f79e382f8f79e6a227c698dd0da8
+  Flutter: 71a624a5bc0c04062bf19101d501e466baf2fb47
+  integration_test: 4a889634ef21a45d28d50d622cf412dc6d9f586e
+
+PODFILE CHECKSUM: 5442629a0e43310dea8d09b4a44dc727bc895bae
+
+COCOAPODS: 1.17.0

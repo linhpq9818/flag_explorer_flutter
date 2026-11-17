@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/flag_explorer/example/ios/.symlinks/plugins/integration_test/example/example.iml" filepath="$PROJECT_DIR$/flag_explorer/example/ios/.symlinks/plugins/integration_test/example/example.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/flag_explorer.iml" filepath="$PROJECT_DIR$/.idea/flag_explorer.iml" />
+      <module fileurl="file://$PROJECT_DIR$/flag_explorer/example/ios/.symlinks/plugins/integration_test/android/src/main/main.iml" filepath="$PROJECT_DIR$/flag_explorer/example/ios/.symlinks/plugins/integration_test/android/src/main/main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/flag_explorer/example/ios/.symlinks/plugins/integration_test/android/src/test/test.iml" filepath="$PROJECT_DIR$/flag_explorer/example/ios/.symlinks/plugins/integration_test/android/src/test/test.iml" />
+    </modules>
+  </component>
+</project>
