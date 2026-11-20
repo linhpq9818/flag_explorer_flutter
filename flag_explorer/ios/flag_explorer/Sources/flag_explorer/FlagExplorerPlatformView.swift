@@ -34,6 +34,7 @@ public class FlagExplorerPlatformView: NSObject, FlutterPlatformView {
         var showCrosshair = true
         var showCard = true
         var showPresets = true
+        var showReset = false
         var enableHaptics = true
         var enableTapFocus = true
         var cardPadding: CGFloat = 28.0
@@ -48,6 +49,7 @@ public class FlagExplorerPlatformView: NSObject, FlutterPlatformView {
             if let crosshair = params["showCenterCrosshair"] as? Bool { showCrosshair = crosshair }
             if let card = params["showCountryCard"] as? Bool { showCard = card }
             if let presets = params["showPresetControls"] as? Bool { showPresets = presets }
+            if let reset = params["showResetButton"] as? Bool { showReset = reset }
             if let haptics = params["enableHapticFeedback"] as? Bool { enableHaptics = haptics }
             if let tapFocus = params["enableTapToFocus"] as? Bool { enableTapFocus = tapFocus }
             if let padding = params["cardBottomPadding"] as? Double { cardPadding = CGFloat(padding) }
@@ -113,6 +115,7 @@ public class FlagExplorerPlatformView: NSObject, FlutterPlatformView {
         vm.showCenterCrosshair = showCrosshair
         vm.showCountryCard = showCard
         vm.showPresetControls = showPresets
+        vm.showResetButton = showReset
         vm.enableHapticFeedback = enableHaptics
         vm.enableTapToFocus = enableTapFocus
         vm.cardBottomPadding = cardPadding
@@ -138,6 +141,10 @@ public class FlagExplorerPlatformView: NSObject, FlutterPlatformView {
     }
     
     private func setupCallbacks() {
+        viewModel.onPresetSelected = { [weak self] name in
+            self?.channel.invokeMethod("onPresetSelected", arguments: ["name": name])
+        }
+
         viewModel.onCountryChanged = { [weak self] country in
             self?.channel.invokeMethod("onCountryChanged", arguments: country?.toDictionary())
         }
@@ -288,6 +295,7 @@ public class FlagExplorerPlatformView: NSObject, FlutterPlatformView {
         viewModel.onCountryChanged = nil
         viewModel.onCameraChanged = nil
         viewModel.onGlobeReady = nil
+        viewModel.onPresetSelected = nil
         hostingController?.view.removeFromSuperview()
         hostingController = nil
     }

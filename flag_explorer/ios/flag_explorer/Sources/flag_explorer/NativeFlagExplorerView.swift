@@ -59,26 +59,28 @@ public struct NativeFlagExplorerView: View {
             }
             
             // 3. Top Header Bar (Reset Button)
-            VStack {
-                HStack {
-                    Spacer()
-                    Button(action: {
-                        viewModel.targetCameraCoordinate = CLLocationCoordinate2D(latitude: 37.982941, longitude: -98.701740)
-                        viewModel.targetCameraDistance = 18_000_000
-                        viewModel.commandTrigger += 1
-                    }) {
-                        Image(systemName: "arrow.counterclockwise")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .frame(width: 38, height: 38)
-                            .background(Color.black.opacity(0.55))
-                            .clipShape(Circle())
-                            .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 0.8))
+            if viewModel.showResetButton {
+                VStack {
+                    HStack {
+                        Spacer()
+                        Button(action: {
+                            viewModel.targetCameraCoordinate = CLLocationCoordinate2D(latitude: 37.982941, longitude: -98.701740)
+                            viewModel.targetCameraDistance = 18_000_000
+                            viewModel.commandTrigger += 1
+                        }) {
+                            Image(systemName: "arrow.counterclockwise")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .frame(width: 38, height: 38)
+                                .background(Color.black.opacity(0.55))
+                                .clipShape(Circle())
+                                .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 0.8))
+                        }
+                        .padding(.trailing, 16)
+                        .padding(.top, 50)
                     }
-                    .padding(.trailing, 16)
-                    .padding(.top, 50)
+                    Spacer()
                 }
-                Spacer()
             }
             
             // 4. Floating Bottom Preset Controls & Country Card
@@ -96,6 +98,7 @@ public struct NativeFlagExplorerView: View {
                                     viewModel.targetCameraDistance = preset.distance
                                     viewModel.commandTrigger += 1
                                     viewModel.triggerHapticFeedback()
+                                    viewModel.onPresetSelected?(preset.name)
                                 }) {
                                     HStack(spacing: 5) {
                                         Text(preset.flag)

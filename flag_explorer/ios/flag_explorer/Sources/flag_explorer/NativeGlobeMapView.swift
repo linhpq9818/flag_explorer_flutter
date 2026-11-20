@@ -22,6 +22,7 @@ public class GlobeViewModel: ObservableObject {
     public var showCenterCrosshair: Bool = true
     public var showCountryCard: Bool = true
     public var showPresetControls: Bool = true
+    public var showResetButton: Bool = false
     
     // Customization Options
     public var enableHapticFeedback: Bool = true
@@ -42,6 +43,7 @@ public class GlobeViewModel: ObservableObject {
     public var onCountryChanged: ((CountryFeature?) -> Void)?
     public var onCameraChanged: ((MKMapCamera) -> Void)?
     public var onGlobeReady: (() -> Void)?
+    public var onPresetSelected: ((String) -> Void)?
     
     public init(
         initialCoordinate: CLLocationCoordinate2D = CLLocationCoordinate2D(latitude: 37.982941, longitude: -98.701740),

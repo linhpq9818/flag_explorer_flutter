@@ -18,6 +18,9 @@ typedef CameraChangedCallback = void Function(CameraPosition position);
 /// Callback invoked when an error occurs in the native layer.
 typedef GlobeErrorCallback = void Function(String errorMessage);
 
+/// Callback invoked when a preset country chip is clicked.
+typedef PresetSelectedCallback = void Function(String name);
+
 /// Embeddable 3D MapKit Satellite Globe with GeoJSON Country Highlighting.
 ///
 /// NOTE: This plugin is iOS-only. When run on other platforms, an unsupported
@@ -29,12 +32,14 @@ class FlagExplorerView extends StatefulWidget {
     this.onCountryChanged,
     this.onCameraChanged,
     this.onError,
+    this.onPresetSelected,
     this.initialCoordinate = const LatLng(37.982941, -98.701740),
     this.initialDistance = 18000000.0,
     this.overlayStyle = const GlobeOverlayStyle(),
     this.showCenterCrosshair = true,
     this.showCountryCard = true,
     this.showPresetControls = true,
+    this.showResetButton = false,
     this.customPresets,
     this.enableHapticFeedback = true,
     this.cardBottomPadding = 28.0,
@@ -55,6 +60,9 @@ class FlagExplorerView extends StatefulWidget {
   /// Called if an error occurs (such as GeoJSON loading failure).
   final GlobeErrorCallback? onError;
 
+  /// Called when a preset country chip is clicked.
+  final PresetSelectedCallback? onPresetSelected;
+
   /// Initial camera center coordinate (defaults to continental USA).
   final LatLng initialCoordinate;
 
@@ -72,6 +80,9 @@ class FlagExplorerView extends StatefulWidget {
 
   /// Whether to display the native horizontal preset country pills/controls.
   final bool showPresetControls;
+
+  /// Whether to display the native reset camera button.
+  final bool showResetButton;
 
   /// Custom list of preset country items to display in the horizontal carousel.
   final List<GlobePresetItem>? customPresets;
@@ -100,12 +111,14 @@ class _FlagExplorerViewState extends State<FlagExplorerView> {
   StreamSubscription<CountryData?>? _countrySub;
   StreamSubscription<CameraPosition>? _cameraSub;
   StreamSubscription<String>? _errorSub;
+  StreamSubscription<String>? _presetSub;
 
   @override
   void dispose() {
     _countrySub?.cancel();
     _cameraSub?.cancel();
     _errorSub?.cancel();
+    _presetSub?.cancel();
     _controller?.dispose();
     super.dispose();
   }
@@ -124,6 +137,10 @@ class _FlagExplorerViewState extends State<FlagExplorerView> {
 
     _errorSub = controller.onError.listen((err) {
       widget.onError?.call(err);
+    });
+
+    _presetSub = controller.onPresetSelected.listen((name) {
+      widget.onPresetSelected?.call(name);
     });
 
     // Fetch initial country and camera position if already ready
@@ -173,6 +190,7 @@ class _FlagExplorerViewState extends State<FlagExplorerView> {
       'showCenterCrosshair': widget.showCenterCrosshair,
       'showCountryCard': widget.showCountryCard,
       'showPresetControls': widget.showPresetControls,
+      'showResetButton': widget.showResetButton,
       if (widget.customPresets != null)
         'customPresets': widget.customPresets!.map((p) => p.toMap()).toList(),
       'enableHapticFeedback': widget.enableHapticFeedback,

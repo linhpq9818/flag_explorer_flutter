@@ -18,6 +18,7 @@ class FlagExplorerController {
   final _countryChangedController = StreamController<CountryData?>.broadcast();
   final _cameraChangedController = StreamController<CameraPosition>.broadcast();
   final _errorController = StreamController<String>.broadcast();
+  final _presetSelectedController = StreamController<String>.broadcast();
   final _readyCompleter = Completer<void>();
 
   /// High-performance [ValueNotifier] holding the current detected country.
@@ -37,6 +38,9 @@ class FlagExplorerController {
 
   /// Broadcast stream emitting any runtime error or dataset loading failure.
   Stream<String> get onError => _errorController.stream;
+
+  /// Broadcast stream emitting when a preset country chip is clicked.
+  Stream<String> get onPresetSelected => _presetSelectedController.stream;
 
   /// Completes when the native MapKit 3D globe has fully initialized.
   Future<void> get whenReady => _readyCompleter.future;
@@ -76,6 +80,11 @@ class FlagExplorerController {
       case 'onError':
         final message = (call.arguments as Map?)?['message'] as String? ?? 'Unknown error';
         _errorController.add(message);
+        break;
+
+      case 'onPresetSelected':
+        final name = (call.arguments as Map?)?['name'] as String? ?? '';
+        _presetSelectedController.add(name);
         break;
 
       default:
@@ -147,5 +156,6 @@ class FlagExplorerController {
     _countryChangedController.close();
     _cameraChangedController.close();
     _errorController.close();
+    _presetSelectedController.close();
   }
 }
