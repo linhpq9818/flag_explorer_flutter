@@ -228,9 +228,12 @@ public final class CountryFeature: Identifiable {
     public let flagEmoji: String
     public let bbox: GeoBoundingBox
     public let polygons: [GeoPolygon]
+    public let visualCenter: CLLocationCoordinate2D
+    public let visualSpan: Double
     
-    // Cached MapKit overlay
+    // Cached MapKit overlay with thread-safe lock
     private var _cachedOverlay: MKOverlay?
+    private let overlayLock = NSLock()
     
     public var isoA2: String? {
         CountryGeoJSONService.iso2(for: isoA3)
@@ -241,16 +244,37 @@ public final class CountryFeature: Identifiable {
         return URL(string: "https://flagcdn.com/w320/\(code).png")
     }
     
-    public init(id: String, name: String, isoA3: String, flagEmoji: String, bbox: GeoBoundingBox, polygons: [GeoPolygon]) {
+    public init(
+        id: String,
+        name: String,
+        isoA3: String,
+        flagEmoji: String,
+        bbox: GeoBoundingBox,
+        polygons: [GeoPolygon],
+        visualCenter: CLLocationCoordinate2D? = nil,
+        visualSpan: Double? = nil
+    ) {
         self.id = id
         self.name = name
         self.isoA3 = isoA3
         self.flagEmoji = flagEmoji
         self.bbox = bbox
         self.polygons = polygons
+        
+        if let vc = visualCenter, let vs = visualSpan {
+            self.visualCenter = vc
+            self.visualSpan = vs
+        } else {
+            let geom = Self.computeVisualGeometry(for: polygons, bbox: bbox)
+            self.visualCenter = geom.center
+            self.visualSpan = geom.span
+        }
     }
     
     public var overlay: MKOverlay {
+        overlayLock.lock()
+        defer { overlayLock.unlock() }
+        
         if let cached = _cachedOverlay {
             return cached
         }
@@ -306,8 +330,8 @@ public final class CountryFeature: Identifiable {
             "name": name,
             "isoA3": isoA3,
             "flagEmoji": flagEmoji,
-            "centerLat": (bbox.minLat + bbox.maxLat) / 2.0,
-            "centerLng": (bbox.minLon + bbox.maxLon) / 2.0
+            "centerLat": visualCenter.latitude,
+            "centerLng": visualCenter.longitude
         ]
         if let a2 = isoA2 {
             dict["isoA2"] = a2
@@ -316,6 +340,106 @@ public final class CountryFeature: Identifiable {
             dict["flagUrl"] = url
         }
         return dict
+    }
+    
+    /// Computes representative visual center and span within mainland/largest polygon
+    public static func computeVisualGeometry(for polygons: [GeoPolygon], bbox: GeoBoundingBox) -> (center: CLLocationCoordinate2D, span: Double) {
+        guard !polygons.isEmpty else {
+            let fallbackLat = (bbox.minLat + bbox.maxLat) / 2.0
+            let fallbackLon = (bbox.minLon + bbox.maxLon) / 2.0
+            return (CLLocationCoordinate2D(latitude: fallbackLat, longitude: fallbackLon), 10.0)
+        }
+        
+        // 1. Find the primary/largest polygon component (by cosine-weighted bounding area)
+        var largestPoly: GeoPolygon?
+        var maxArea: Double = -1.0
+        var bestMinLat: Double = 0
+        var bestMaxLat: Double = 0
+        var bestMinLon: Double = 0
+        var bestMaxLon: Double = 0
+        
+        for poly in polygons {
+            let ring = poly.outerRing
+            guard ring.count >= 3 else { continue }
+            
+            var minLat = ring[0].latitude
+            var maxLat = ring[0].latitude
+            var minLon = ring[0].longitude
+            var maxLon = ring[0].longitude
+            
+            for pt in ring.dropFirst() {
+                if pt.latitude < minLat { minLat = pt.latitude }
+                if pt.latitude > maxLat { maxLat = pt.latitude }
+                if pt.longitude < minLon { minLon = pt.longitude }
+                if pt.longitude > maxLon { maxLon = pt.longitude }
+            }
+            
+            let spanLat = maxLat - minLat
+            let spanLon = maxLon - minLon
+            let midLat = (minLat + maxLat) / 2.0
+            let rad = midLat * .pi / 180.0
+            let cosWeight = max(0.01, cos(rad))
+            let area = spanLat * spanLon * cosWeight
+            
+            if area > maxArea {
+                maxArea = area
+                largestPoly = poly
+                bestMinLat = minLat
+                bestMaxLat = maxLat
+                bestMinLon = minLon
+                bestMaxLon = maxLon
+            }
+        }
+        
+        guard let primaryPoly = largestPoly else {
+            let fallbackMidLat = (bbox.minLat + bbox.maxLat) / 2.0
+            let fallbackMidLon = (bbox.minLon + bbox.maxLon) / 2.0
+            return (CLLocationCoordinate2D(latitude: fallbackMidLat, longitude: fallbackMidLon), 10.0)
+        }
+        
+        let spanLat = bestMaxLat - bestMinLat
+        let spanLon = bestMaxLon - bestMinLon
+        let span = max(spanLat, spanLon)
+        
+        let midLat = (bestMinLat + bestMaxLat) / 2.0
+        let midLon = (bestMinLon + bestMaxLon) / 2.0
+        
+        // 2. If the midpoint of the largest polygon's bounding box is inside the polygon, use it directly!
+        if primaryPoly.contains(lon: midLon, lat: midLat) {
+            return (CLLocationCoordinate2D(latitude: midLat, longitude: midLon), span)
+        }
+        
+        // 3. Otherwise (concave / curved shapes like Vietnam, Japan, Chile, Italy),
+        // search a 15x15 grid within its bounding box for the point inside closest to the center.
+        let steps = 15
+        let stepLat = spanLat / Double(steps)
+        let stepLon = spanLon / Double(steps)
+        
+        var bestCandidate: CLLocationCoordinate2D?
+        var minDistanceSq: Double = .greatestFiniteMagnitude
+        
+        for i in 1..<steps {
+            let lat = bestMinLat + Double(i) * stepLat
+            for j in 1..<steps {
+                let lon = bestMinLon + Double(j) * stepLon
+                if primaryPoly.contains(lon: lon, lat: lat) {
+                    let dLat = lat - midLat
+                    let dLon = lon - midLon
+                    let distSq = dLat * dLat + dLon * dLon
+                    if distSq < minDistanceSq {
+                        minDistanceSq = distSq
+                        bestCandidate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+                    }
+                }
+            }
+        }
+        
+        if let candidate = bestCandidate {
+            return (candidate, span)
+        }
+        
+        let fallback = primaryPoly.outerRing.first ?? CLLocationCoordinate2D(latitude: midLat, longitude: midLon)
+        return (fallback, span)
     }
 }
 

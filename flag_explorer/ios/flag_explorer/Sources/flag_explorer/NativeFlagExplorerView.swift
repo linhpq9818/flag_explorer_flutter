@@ -32,6 +32,7 @@ public struct NativeFlagExplorerView: View {
         NativePresetLocation(name: "Vietnam", flag: "🇻🇳", isoA3: "VNM", coordinate: CLLocationCoordinate2D(latitude: 14.0583, longitude: 108.2772), distance: 8_000_000),
         NativePresetLocation(name: "USA", flag: "🇺🇸", isoA3: "USA", coordinate: CLLocationCoordinate2D(latitude: 37.0902, longitude: -95.7129), distance: 18_000_000),
         NativePresetLocation(name: "Japan", flag: "🇯🇵", isoA3: "JPN", coordinate: CLLocationCoordinate2D(latitude: 36.2048, longitude: 138.2529), distance: 8_000_000),
+        NativePresetLocation(name: "France", flag: "🇫🇷", isoA3: "FRA", coordinate: CLLocationCoordinate2D(latitude: 46.2276, longitude: 2.2137), distance: 7_500_000),
         NativePresetLocation(name: "UK", flag: "🇬🇧", isoA3: "GBR", coordinate: CLLocationCoordinate2D(latitude: 52.3555, longitude: -1.1743), distance: 7_500_000),
         NativePresetLocation(name: "Australia", flag: "🇦🇺", isoA3: "AUS", coordinate: CLLocationCoordinate2D(latitude: -25.2744, longitude: 133.7751), distance: 14_000_000),
         NativePresetLocation(name: "Brazil", flag: "🇧🇷", isoA3: "BRA", coordinate: CLLocationCoordinate2D(latitude: -14.2350, longitude: -51.9253), distance: 16_000_000),
@@ -100,18 +101,18 @@ public struct NativeFlagExplorerView: View {
                                     viewModel.triggerHapticFeedback()
                                     viewModel.onPresetSelected?(preset.name)
                                 }) {
-                                    HStack(spacing: 5) {
+                                    HStack(spacing: 6) {
                                         Text(preset.flag)
                                             .font(.system(size: 14))
                                         Text(preset.name)
-                                            .font(.system(size: 13, weight: .medium))
+                                            .font(.system(size: 13, weight: .semibold))
                                             .foregroundStyle(Color.white)
                                     }
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 7)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 8)
                                     .background(
                                         isSelected
-                                            ? Color.red.opacity(0.35)
+                                            ? Color.red.opacity(0.40)
                                             : Color.black.opacity(0.65)
                                     )
                                     .clipShape(Capsule())
@@ -122,6 +123,8 @@ public struct NativeFlagExplorerView: View {
                                         )
                                     )
                                 }
+                                .buttonStyle(.plain)
+                                .contentShape(Capsule())
                             }
                         }
                         .padding(.horizontal, 16)

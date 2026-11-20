@@ -75,10 +75,7 @@ public class FlagExplorerPlatformView: NSObject, FlutterPlatformView {
                     if let la = lat, let lo = lng {
                         coord = CLLocationCoordinate2D(latitude: la, longitude: lo)
                     } else if let country = CountryGeoJSONService.shared.country(forIsoA3: iso) {
-                        coord = CLLocationCoordinate2D(
-                            latitude: (country.bbox.minLat + country.bbox.maxLat) / 2.0,
-                            longitude: (country.bbox.minLon + country.bbox.maxLon) / 2.0
-                        )
+                        coord = country.visualCenter
                     } else {
                         coord = CLLocationCoordinate2D(latitude: 0, longitude: 0)
                     }
@@ -211,13 +208,8 @@ public class FlagExplorerPlatformView: NSObject, FlutterPlatformView {
             let requestedAltitude = args["altitude"] as? Double
             
             if let country = CountryGeoJSONService.shared.country(forIsoA3: isoA3) {
-                let centerLat = (country.bbox.minLat + country.bbox.maxLat) / 2.0
-                let centerLon = (country.bbox.minLon + country.bbox.maxLon) / 2.0
-                let coord = CLLocationCoordinate2D(latitude: centerLat, longitude: centerLon)
-                
-                let latSpread = abs(country.bbox.maxLat - country.bbox.minLat)
-                let lonSpread = abs(country.bbox.maxLon - country.bbox.minLon)
-                let maxSpread = max(latSpread, lonSpread)
+                let coord = country.visualCenter
+                let maxSpread = country.visualSpan
                 
                 let targetDistance: Double
                 if let explicitAlt = requestedAltitude {

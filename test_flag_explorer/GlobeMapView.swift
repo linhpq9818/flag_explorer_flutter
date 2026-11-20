@@ -102,6 +102,9 @@ struct GlobeMapView: UIViewRepresentable {
                 let country = CountryGeoJSONService.shared.findCountry(at: coordinate)
                 guard self.activeLookupToken == token else { return }
                 
+                // Warm up overlay on background thread
+                let preparedOverlay = country?.overlay
+                
                 DispatchQueue.main.async {
                     guard self.activeLookupToken == token else { return }
                     
@@ -110,7 +113,7 @@ struct GlobeMapView: UIViewRepresentable {
                         if self.currentHighlightedCountryId != country.id {
                             self.currentHighlightedCountryId = country.id
                             self.parent.detectedCountry = country
-                            self.updateOverlay(with: country)
+                            self.updateOverlay(with: country, preparedOverlay: preparedOverlay)
                         }
                     } else {
                         // Over ocean or unclaimed area
@@ -124,14 +127,13 @@ struct GlobeMapView: UIViewRepresentable {
             }
         }
         
-        private func updateOverlay(with country: CountryFeature) {
+        private func updateOverlay(with country: CountryFeature, preparedOverlay: MKOverlay? = nil) {
             guard let mapView = mapView else { return }
-            
+            let newOverlay = preparedOverlay ?? country.overlay
             if let old = currentOverlay {
+                if old === newOverlay { return }
                 mapView.removeOverlay(old)
             }
-            
-            let newOverlay = country.overlay
             currentOverlay = newOverlay
             mapView.addOverlay(newOverlay, level: .aboveRoads)
         }

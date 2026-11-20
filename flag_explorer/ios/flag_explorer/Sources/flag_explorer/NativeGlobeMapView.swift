@@ -32,11 +32,11 @@ public class GlobeViewModel: ObservableObject {
     public var crosshairSize: CGFloat = 56.0
     public var customPresets: [NativePresetLocation]?
     
+    private let hapticGenerator = UIImpactFeedbackGenerator(style: .light)
+    
     public func triggerHapticFeedback() {
         guard enableHapticFeedback else { return }
-        let generator = UIImpactFeedbackGenerator(style: .light)
-        generator.prepare()
-        generator.impactOccurred()
+        hapticGenerator.impactOccurred()
     }
     
     // Callbacks to Flutter MethodChannel
@@ -137,7 +137,10 @@ public struct NativeGlobeMapView: UIViewRepresentable {
         // Background PIP lookup synchronization
         private var activeLookupToken: UUID?
         private var lastLookupTime: TimeInterval = 0
-        private let throttleInterval: TimeInterval = 0.05 // 50ms
+        private let throttleInterval: TimeInterval = 0.08 // 80ms
+        
+        private var lastCoordinateUpdateTime: TimeInterval = 0
+        private let coordinateUpdateInterval: TimeInterval = 0.10 // 100ms throttle to prevent 120fps SwiftUI re-renders
         
         private var lastCameraEmitTime: TimeInterval = 0
         private let cameraEmitInterval: TimeInterval = 0.10 // 100ms
@@ -150,12 +153,15 @@ public struct NativeGlobeMapView: UIViewRepresentable {
         public func mapViewDidChangeVisibleRegion(_ mapView: MKMapView) {
             let center = mapView.camera.centerCoordinate
             let distance = mapView.camera.centerCoordinateDistance
-            
-            // Immediate local state update for buttery smooth UI
-            self.viewModel.centerCoordinate = center
-            self.viewModel.cameraDistance = distance
-            
             let now = CACurrentMediaTime()
+            
+            // Throttle coordinate updates to max 10Hz to prevent 120fps continuous SwiftUI diffing
+            if now - lastCoordinateUpdateTime >= coordinateUpdateInterval {
+                lastCoordinateUpdateTime = now
+                self.viewModel.centerCoordinate = center
+                self.viewModel.cameraDistance = distance
+            }
+            
             if now - lastLookupTime >= throttleInterval {
                 lastLookupTime = now
                 performDetection(at: center)
@@ -186,13 +192,8 @@ public struct NativeGlobeMapView: UIViewRepresentable {
             DispatchQueue.global(qos: .userInteractive).async { [weak self] in
                 guard let self = self else { return }
                 if let country = CountryGeoJSONService.shared.findCountry(at: tapCoord) {
-                    let centerLat = (country.bbox.minLat + country.bbox.maxLat) / 2.0
-                    let centerLon = (country.bbox.minLon + country.bbox.maxLon) / 2.0
-                    let coord = CLLocationCoordinate2D(latitude: centerLat, longitude: centerLon)
-                    
-                    let latSpread = abs(country.bbox.maxLat - country.bbox.minLat)
-                    let lonSpread = abs(country.bbox.maxLon - country.bbox.minLon)
-                    let maxSpread = max(latSpread, lonSpread)
+                    let coord = country.visualCenter
+                    let maxSpread = country.visualSpan
                     
                     let targetDistance: Double
                     if maxSpread > 35 { targetDistance = 22_000_000 }
@@ -226,6 +227,9 @@ public struct NativeGlobeMapView: UIViewRepresentable {
                 let country = CountryGeoJSONService.shared.findCountry(at: coordinate)
                 guard self.activeLookupToken == token else { return }
                 
+                // Warm up and precompute overlay on background thread so main thread never stalls!
+                let preparedOverlay = country?.overlay
+                
                 DispatchQueue.main.async {
                     guard self.activeLookupToken == token else { return }
                     
@@ -233,7 +237,7 @@ public struct NativeGlobeMapView: UIViewRepresentable {
                         if self.currentHighlightedCountryId != country.id {
                             self.currentHighlightedCountryId = country.id
                             self.viewModel.detectedCountry = country
-                            self.updateOverlay(with: country)
+                            self.updateOverlay(with: country, preparedOverlay: preparedOverlay)
                             self.viewModel.onCountryChanged?(country)
                             self.viewModel.triggerHapticFeedback()
                         }
@@ -249,12 +253,13 @@ public struct NativeGlobeMapView: UIViewRepresentable {
             }
         }
         
-        private func updateOverlay(with country: CountryFeature) {
+        private func updateOverlay(with country: CountryFeature, preparedOverlay: MKOverlay? = nil) {
             guard let mapView = mapView else { return }
+            let newOverlay = preparedOverlay ?? country.overlay
             if let old = currentOverlay {
+                if old === newOverlay { return }
                 mapView.removeOverlay(old)
             }
-            let newOverlay = country.overlay
             currentOverlay = newOverlay
             mapView.addOverlay(newOverlay, level: .aboveRoads)
         }
