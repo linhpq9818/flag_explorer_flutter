@@ -75,7 +75,8 @@ public struct NativeFlagExplorerView: View {
                                 .frame(width: 38, height: 38)
                                 .background(Color.black.opacity(0.55))
                                 .clipShape(Circle())
-                                .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 0.8))
+                                .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 0.8).allowsHitTesting(false))
+                                .contentShape(Circle())
                         }
                         .padding(.trailing, 16)
                         .padding(.top, 50)
@@ -121,7 +122,9 @@ public struct NativeFlagExplorerView: View {
                                             isSelected ? Color.red : Color.white.opacity(0.25),
                                             lineWidth: isSelected ? 1.5 : 0.8
                                         )
+                                        .allowsHitTesting(false)
                                     )
+                                    .contentShape(Capsule())
                                 }
                                 .buttonStyle(.plain)
                                 .contentShape(Capsule())
